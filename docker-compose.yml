@@ -11,6 +11,18 @@ services:
       timeout: 3s
       retries: 10
 
+  dotnet-demo:
+    build:
+      context: ./apps/lab-service
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-opsatlas};Username=${POSTGRES_USER:-opsatlas};Password=${POSTGRES_PASSWORD:-opsatlas-dev-only};Timeout=2
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend:
     build:
       context: ./apps/backend
@@ -20,11 +32,14 @@ services:
       DATABASE_NAME: ${POSTGRES_DB:-opsatlas}
       DATABASE_USER: ${POSTGRES_USER:-opsatlas}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-opsatlas-dev-only}
+      DOTNET_HEALTH_URL: http://dotnet-demo:8080/health/live
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      dotnet-demo:
+        condition: service_started
 
   frontend:
     build:

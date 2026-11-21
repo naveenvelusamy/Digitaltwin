@@ -15,7 +15,7 @@ class Service(BaseModel):
     name: str
     kind: str
     status: HealthStatus
-    status_source: Literal["real", "derived"]
+    status_source: Literal["real", "derived", "simulated"]
     detail: str
 
 

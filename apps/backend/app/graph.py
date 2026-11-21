@@ -1,25 +1,17 @@
-from networkx import DiGraph
+from typing import Literal
+
+from networkx import DiGraph, topological_sort
 
 from .models import Dependency, HealthStatus, Service
 
 
 SERVICES: dict[str, dict[str, str]] = {
-    "member-portal": {"name": "Member Portal", "kind": "frontend"},
-    "api-gateway": {"name": "API Gateway", "kind": "gateway"},
-    "account-service": {"name": "Account Service", "kind": "service"},
-    "order-service": {"name": "Order Service", "kind": "service"},
-    "payment-service": {"name": "Payment Service", "kind": "service"},
+    "dotnet-demo": {"name": "Demo .NET Service", "kind": "ASP.NET Core"},
     "postgresql": {"name": "PostgreSQL", "kind": "database"},
 }
 
 DEPENDENCY_RECORDS = [
-    ("member-portal", "api-gateway"),
-    ("api-gateway", "account-service"),
-    ("api-gateway", "order-service"),
-    ("api-gateway", "payment-service"),
-    ("account-service", "postgresql"),
-    ("order-service", "postgresql"),
-    ("payment-service", "postgresql"),
+    ("dotnet-demo", "postgresql"),
 ]
 
 
@@ -34,33 +26,46 @@ def dependencies() -> list[Dependency]:
     return [Dependency(source=source, target=target) for source, target in DEPENDENCY_RECORDS]
 
 
-def derive_statuses(database_status: HealthStatus, database_detail: str) -> list[Service]:
-    statuses: dict[str, HealthStatus] = {}
-    sources: dict[str, str] = {}
-    details: dict[str, str] = {}
-
-    statuses["postgresql"] = database_status
-    sources["postgresql"] = "real"
-    details["postgresql"] = database_detail
+def derive_statuses(
+    database_status: HealthStatus,
+    database_detail: str,
+    database_source: Literal["real", "simulated"],
+    app_status: HealthStatus,
+    app_detail: str,
+) -> list[Service]:
+    statuses = {
+        "dotnet-demo": app_status,
+        "postgresql": database_status,
+    }
+    sources: dict[str, Literal["real", "derived", "simulated"]] = {
+        "dotnet-demo": "real",
+        "postgresql": database_source,
+    }
+    details = {
+        "dotnet-demo": app_detail,
+        "postgresql": database_detail,
+    }
 
     graph = build_graph()
-    for service_id in reversed(list(graph.nodes)):
-        if service_id in statuses:
+    for service_id in reversed(list(topological_sort(graph))):
+        if statuses[service_id] != HealthStatus.HEALTHY:
             continue
 
-        dependencies = list(graph.successors(service_id))
-        direct_dependency_statuses = [statuses.get(dependency) for dependency in dependencies]
-
-        if HealthStatus.FAILED in direct_dependency_statuses:
+        unhealthy_dependencies = [
+            dependency
+            for dependency in graph.successors(service_id)
+            if statuses[dependency] != HealthStatus.HEALTHY
+        ]
+        if unhealthy_dependencies:
             statuses[service_id] = HealthStatus.DEGRADED
-            details[service_id] = "Dependency check reports PostgreSQL unavailable"
-        elif HealthStatus.DEGRADED in direct_dependency_statuses:
-            statuses[service_id] = HealthStatus.DEGRADED
-            details[service_id] = "One or more downstream dependencies are degraded"
-        else:
-            statuses[service_id] = HealthStatus.HEALTHY
-            details[service_id] = "No unhealthy dependency detected; no direct probe is configured"
-        sources[service_id] = "derived"
+            sources[service_id] = "derived"
+            dependency_names = [
+                SERVICES[dependency]["name"] for dependency in unhealthy_dependencies
+            ]
+            details[service_id] = (
+                "Service is live, but dependency health is degraded: "
+                + ", ".join(dependency_names)
+            )
 
     return [
         Service(

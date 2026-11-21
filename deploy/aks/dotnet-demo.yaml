@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dotnet-demo
+  namespace: opsatlas-lab
+  labels:
+    app.kubernetes.io/name: dotnet-demo
+    app.kubernetes.io/part-of: opsatlas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dotnet-demo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dotnet-demo
+        app.kubernetes.io/part-of: opsatlas
+    spec:
+      containers:
+        - name: dotnet-demo
+          image: opsatlasacr.azurecr.io/opsatlas-dotnet-demo:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: ASPNETCORE_URLS
+              value: http://+:8080
+            - name: ConnectionStrings__Postgres
+              valueFrom:
+                secretKeyRef:
+                  name: opsatlas-db
+                  key: connection-string
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+            failureThreshold: 2
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dotnet-demo
+  namespace: opsatlas-lab
+  labels:
+    app.kubernetes.io/name: dotnet-demo
+    app.kubernetes.io/part-of: opsatlas
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: dotnet-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

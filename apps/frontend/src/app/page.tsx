@@ -24,7 +24,7 @@ type Service = {
   name: string;
   kind: string;
   status: HealthStatus;
-  status_source: "real" | "derived";
+  status_source: "real" | "derived" | "simulated";
   detail: string;
 };
 
@@ -59,17 +59,13 @@ function ServiceNode({ data, selected }: NodeProps<Node<{ service: Service }>>) 
 const nodeTypes = { service: ServiceNode };
 
 const positionById: Record<string, { x: number; y: number }> = {
-  "member-portal": { x: 390, y: 0 },
-  "api-gateway": { x: 390, y: 150 },
-  "account-service": { x: 60, y: 320 },
-  "order-service": { x: 390, y: 320 },
-  "payment-service": { x: 720, y: 320 },
-  postgresql: { x: 390, y: 500 },
+"dotnet-demo": { x: 390, y: 80 },
+postgresql: { x: 390, y: 330 },
 };
 
 export default function Home() {
   const [topology, setTopology] = useState<Topology | null>(null);
-  const [selectedId, setSelectedId] = useState("postgresql");
+  const [selectedId, setSelectedId] = useState("dotnet-demo");
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
