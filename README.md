@@ -4,7 +4,7 @@ OpsAtlas is a local-first infrastructure digital twin prototype for the Alegeus 
 
 ## Current milestone
 
-The repository starts with a FastAPI topology API and a local PostgreSQL lab. PostgreSQL status is obtained through a real `SELECT 1` probe. Service impact is derived through a declared dependency graph and is labeled as derived data.
+The repository starts with a FastAPI topology API, an interactive Next.js dashboard, and a local PostgreSQL lab. PostgreSQL status is obtained through a real `SELECT 1` probe. Service impact is derived through a declared dependency graph and is labeled as derived data.
 
 ## Run locally
 
@@ -13,6 +13,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
+- Dashboard: http://localhost:3000
 - API: http://localhost:8000
 - API docs: http://localhost:8000/docs
 - Topology: http://localhost:8000/api/v1/topology
