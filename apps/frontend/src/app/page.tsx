@@ -15,7 +15,9 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-const API_URL = process.env.NEXT_PUBLIC_OPSATLAS_API_URL ?? "http://localhost:8000";
+const API_URL =
+  process.env.NEXT_PUBLIC_OPSATLAS_API_URL ??
+  (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "");
 
 type HealthStatus = "healthy" | "degraded" | "failed";
 type StatusSource = "real" | "derived" | "simulated";
@@ -128,6 +130,13 @@ export default function Home() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   async function refreshTopology() {
+    if (!API_URL) {
+      setTopology(null);
+      setLastUpdated(null);
+      setError("Public API URL is not configured. This Vercel deployment is frontend-only.");
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/v1/topology`, { cache: "no-store" });
       if (!response.ok) throw new Error(`Topology request failed (${response.status})`);
@@ -149,6 +158,7 @@ export default function Home() {
   }, []);
 
   async function runLabAction(action: "outage" | "recovery") {
+    if (!API_URL) return;
     setBusy(true);
     setActionMessage(null);
     try {
@@ -315,7 +325,12 @@ export default function Home() {
         <div className="min-w-0 flex-1 p-3 sm:p-5 lg:p-6">
           {error && (
             <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
-              {error}. Confirm the backend is running at <code>{API_URL}</code>.
+              {error}
+              {API_URL && (
+                <>
+                  {" "}Confirm the backend is running at <code>{API_URL}</code>.
+                </>
+              )}
             </div>
           )}
 
@@ -692,14 +707,16 @@ export default function Home() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => runLabAction("outage")}
-                  disabled={busy}
+                  disabled={busy || !API_URL}
+                  title={!API_URL ? "Configure a public API URL to enable lab controls" : undefined}
                   className="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-[9px] font-semibold text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
                 >
                   Trigger simulated outage
                 </button>
                 <button
                   onClick={() => runLabAction("recovery")}
-                  disabled={busy}
+                  disabled={busy || !API_URL}
+                  title={!API_URL ? "Configure a public API URL to enable lab controls" : undefined}
                   className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[9px] font-semibold text-emerald-200 transition hover:bg-emerald-500/20 disabled:opacity-50"
                 >
                   Clear simulated outage

@@ -61,6 +61,17 @@ The .NET service has a Kubernetes Deployment and ClusterIP Service in `deploy/ak
 
 The manifest includes startup, liveness, and readiness probes, non-root execution, resource requests/limits, and a secret reference. It deploys only the .NET demo service; the current OpsAtlas API/dashboard remain local Compose services.
 
+## Vercel frontend preview
+
+The Next.js dashboard can be deployed separately to Vercel from the GitHub repository:
+
+1. Import the repository in Vercel.
+2. Set **Root Directory** to `apps/frontend`.
+3. Use the `feature/infra-dashboard-polish` branch or another branch you want Vercel to deploy.
+4. Keep the default Next.js build and output settings, then deploy.
+
+This is a frontend-only deployment. The API, .NET demo service, and PostgreSQL remain on the local Docker network, so a Vercel-hosted browser cannot reach them. Without a public API, the page will say the backend is not configured, show no live topology, and disable the lab outage controls. Do not set `NEXT_PUBLIC_OPSATLAS_API_URL` to `localhost` in Vercel; that would refer to each visitor's own computer. To enable live monitoring later, deploy the API and lab dependencies to a reachable, secured environment and set `NEXT_PUBLIC_OPSATLAS_API_URL` to its public HTTPS API base URL in Vercel, then redeploy. Do not expose the demo API or database publicly without adding appropriate authentication and network controls.
+
 ## Test backend
 
 ```bash
